@@ -4,7 +4,7 @@
 #define PIN_BTN 2
 
 #define USE_TIMER_1     true
-#define TIMER1_INTERVAL_MS  5000
+#define TIMER1_INTERVAL_MS  1000
 
 #include <SPI.h>
 #include <MFRC522.h>
@@ -32,7 +32,7 @@ void setup() {
 
 void loop() {
   // Get button state
-  isOn = digitalRead(PIN_BTN);
+  isOn = !digitalRead(PIN_BTN);
   
   // Check presence of new card
   if (!rfid.PICC_IsNewCardPresent()) {
@@ -68,10 +68,8 @@ void printHex(byte *buffer, byte bufferSize) {
 
 void Timer1Handler() {
   // Print recorded NUID if not "empty" / is not filled with 0s
-  if (nuidPICC[0] || nuidPICC[1] || nuidPICC[2] || nuidPICC[3]) {
+  if (isOn && (nuidPICC[0] || nuidPICC[1] || nuidPICC[2] || nuidPICC[3])) {
     printHex(nuidPICC, sizeof(nuidPICC));
-    Serial.print(":");
-    Serial.print(isOn ? "on" : "off");
     Serial.print(":");
     Serial.println(analogRead(PIN_POT));
   }
