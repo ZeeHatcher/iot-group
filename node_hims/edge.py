@@ -61,9 +61,12 @@ def get_threshold(nuid):
 def put_item(nuid):
     item = {
         "id": nuid,
-        "threshold": 0
+        "threshold": 0,
+        "name": ""
     }
+    print("Item '%s' does not exist. Creating new item..." % nuid, end=" ")
     items.put_item(Item=item)
+    print("Created.")
 
     return item
 
