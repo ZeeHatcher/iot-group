@@ -85,6 +85,31 @@ def get_weights():
 
     return jsonify(weights)
 
+#Security
+@app.route("/facial")
+def facial():
+    return render_template("facial.html")
+
+@app.route("/add_face/<input_name>", methods=['POST'])
+def add_face(input_name):
+    dynamodb = boto3.resource("dynamodb")
+    table = dynamodb.Table("securitylog")
+
+    field = request.form["field"]
+    value = request.form.get("value")
+#     global training,name
+#     training = True
+#     name = input_name
+# #     templateData = {
+# #         "isTraining" : training,
+# #     }
+#     if(training):
+#         return "1"
+#     else:
+#         return "0"
+    
+    
+
 if __name__ == "__main__":
     # Load .env file for development
     load_dotenv()
