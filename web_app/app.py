@@ -109,7 +109,9 @@ def get_weights():
         items[r["id"]] = {
             "name": r["name"],
             "threshold": r["threshold"],
-            "weights": []
+            "log": [],
+            "weight": None,
+            "is_depleted": None
         }
 
     rows = table_weights.scan()["Items"]
@@ -117,10 +119,13 @@ def get_weights():
         if r["id"] not in items:
             continue
 
-        items[r["id"]]["weights"].append({
+        items[r["id"]]["log"].append({
             "weight": r["data"]["weight"],
             "timestamp": r["timestamp"]
         })
+
+        items[r["id"]]["weight"] = r["data"]["weight"]
+        items[r["id"]]["is_depleted"] = r["data"]["is_depleted"]
 
     return jsonify(items)
 

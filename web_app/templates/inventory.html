@@ -99,7 +99,7 @@
               console.log(res);
 
               for (const [id, data] of Object.entries(res)) {
-                let weights = data["weights"];
+                let weights = data["log"];
 
                 if (id in charts) {
                   // Update data in existing charts
@@ -132,15 +132,15 @@
                 }
 
                 // Update current weight value
-                root.find("span[name='weight']").text((weights.length > 0) ? weights[weights.length-1]["weight"] : "-");
+                root.find("span[name='weight']").text(data["weight"] || "-");
 
-                // Update item usage rate value
-                root.find("span[name='rate']").text((data["rate"] != null) ? data["rate"] : "-");
+                let card = root.find(".card");
+                if (data["is_depleted"]) {
+                  card.addClass("border-danger");
+                } else {
+                  card.removeClass("border-danger");
+                }
               }
-
-              // Update list of items that are running out
-              let list = $("#list-running-out");
-              list.empty();
             },
           });
         }
