@@ -23,23 +23,6 @@ def dashboard():
 def inventory():
     return render_template("inventory.html")
 
-# Routes for HIMS node
-@app.route("/hims/items")
-def get_items():
-    dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table("items")
-
-    items = {}
-
-    rows = table.scan()["Items"]
-    for r in rows:
-        items[r["id"]] = {
-            "name": r["name"],
-            "threshold": r["threshold"],
-        }
-
-    return jsonify(items)
-
 @app.route("/hims/items/<nuid>", methods=["POST"])
 def update_item(nuid):
     dynamodb = boto3.resource("dynamodb")
@@ -108,7 +91,7 @@ def get_weights():
     for r in rows:
         items[r["id"]] = {
             "name": r["name"],
-            "threshold": r["threshold"],
+            "threshold": int(r["threshold"]),
             "log": [],
             "weight": None,
             "is_depleted": None
@@ -120,11 +103,11 @@ def get_weights():
             continue
 
         items[r["id"]]["log"].append({
-            "weight": r["data"]["weight"],
-            "timestamp": r["timestamp"]
+            "weight": int(r["data"]["weight"]),
+            "timestamp": int(r["timestamp"])
         })
 
-        items[r["id"]]["weight"] = r["data"]["weight"]
+        items[r["id"]]["weight"] = int(r["data"]["weight"])
         items[r["id"]]["is_depleted"] = r["data"]["is_depleted"]
 
     return jsonify(items)
