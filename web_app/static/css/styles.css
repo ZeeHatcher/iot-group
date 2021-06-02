@@ -1,0 +1,8 @@
+tr {
+  border-style: hidden;
+}
+
+.bi {
+  display: inline-block;
+  vertical-align: -.15em;
+}
