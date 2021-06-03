@@ -11,6 +11,14 @@ from uuid import uuid4
 
 app = Flask(__name__)
 
+preLight = 0
+ACCESS_KEY = "AKIAXBIUDGGGO7OFZ5GZ"
+SECRET_KEY = "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"
+
+pins = {
+    3: {'name' : 'PIN 3', 'state' : 0}
+}
+
 @app.route("/")
 def index():
     return redirect("/dashboard")
@@ -22,6 +30,88 @@ def dashboard():
 @app.route("/inventory")
 def inventory():
     return render_template("inventory.html")
+
+
+@app.route("/light")
+def light():
+    global preLight
+    dynamodb = boto3.resource("dynamodb",
+                              aws_access_key_id=ACCESS_KEY,
+                              aws_secret_access_key=SECRET_KEY,
+                              region_name='ap-southeast-1')
+    table = dynamodb.Table("lightSensor")
+
+    response = table.query(Limit=1,
+                           ScanIndexForward=False,
+                           KeyConditionExpression=Key('id').eq('light'))
+    
+    items = {}
+
+    rows = response["Items"]
+    for r in rows:
+        pins[3]['state'] = r['state']
+        items = {
+            "pins" : pins,
+            'valueDist' : r["distance"],
+            'valueLight' : r["light"],
+            'preLight' : preLight
+        }
+        preLight = r["light"]
+
+    return render_template("light.html", **items)
+
+@app.route("/<changePin>/<toggle>") 
+def toggle_function(changePin, toggle):
+     global preLight
+     changePin = int(changePin)
+     
+     deviceName = pins[changePin]['name']
+     
+     if toggle == "on":
+         if changePin == 3:
+             payload = { "state": 1 }
+             pins[changePin]['state'] = 1
+             
+     if toggle == "off":
+         if changePin == 3:
+             payload = { "state": 0 }
+             pins[changePin]['state'] = 0
+     
+     dynamodb = boto3.resource('dynamodb',
+                              aws_access_key_id=ACCESS_KEY,
+                              aws_secret_access_key=SECRET_KEY,
+                              region_name='ap-southeast-1')
+     table = dynamodb.Table("lightSensor")
+
+     response = table.query(Limit=1,
+                           ScanIndexForward=False,
+                           KeyConditionExpression=Key('id').eq('light'))
+    
+     items = {}
+
+     rows = response["Items"]
+     for r in rows:
+        items = {
+            "pins" : pins,
+            'valueDist' : r["distance"],
+            'valueLight' : r["light"],
+            'preLight' : preLight
+        }
+        preLight = r["light"]
+     
+     topic = 'lightSensor'
+     print("Publishing...")
+     print("\tTopic:", topic)
+     print("\tPayload:", payload)
+     publish_future, packet_id = mqtt_connection.publish(
+        topic=topic,
+        payload=json.dumps(payload),
+        qos=mqtt.QoS.AT_LEAST_ONCE)
+     publish_future.result()
+     print("Published.")
+     
+     return render_template('light.html', **items)
+
 
 @app.route("/hims/items/<nuid>", methods=["POST"])
 def update_item(nuid):
