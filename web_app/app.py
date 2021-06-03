@@ -3,6 +3,7 @@ from awsiot import mqtt_connection_builder
 import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
+from datetime import datetime
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify, g, redirect, abort
 import json
@@ -383,9 +384,9 @@ def get_weights():
     return jsonify(items)
 
 #Security
-@app.route("/facial")
-def facial():
-    return render_template("facial.html")
+@app.route("/security")
+def security():
+    return render_template("security.html")
 
 @app.route("/add_face/<input_name>", methods=['POST'])
 #Function for toggling training mode and call edge to detect new faces
