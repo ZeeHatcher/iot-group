@@ -1,4 +1,8 @@
 *.swp
 .env
 .certs
+<<<<<<< HEAD
 node_frLock/images
+=======
+.DS_Store
+>>>>>>> e7c3e84ee438ccf329e417845c82fab22621b398

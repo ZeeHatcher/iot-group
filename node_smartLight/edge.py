@@ -3,9 +3,20 @@ import MySQLdb
 import time 
 from flask import Flask, render_template
 
+import paho.mqtt.client as paho
+import os
+import socket
+import ssl
+import random
+import string
+import json
+from time import sleep
+from random import uniform
+ 
+connflag = False
+
 device = '/dev/ttyACM0'
 ser = serial.Serial(device, 9600, timeout=1)
-app = Flask (__name__)
 
 # Dictionary of pins with name of pin and state ON/OFF 
 pins = {
@@ -16,106 +27,69 @@ valueDist = 0
 valueLight = 0
 preLight = 0
 
-# Main function when accessing the website 
-@app.route("/") 
-def index():
-    global valueLight
+def on_connect(client, userdata, flags, rc):                # func for making connection
+    global connflag
+    print("Connected to AWS")
+    connflag = True
+    print("Connection returned result: " + str(rc) )
+    client.subscribe("lightSensor")
+ 
+def on_message(client, userdata, msg):                      # Func for Sending msg
+    item = json.loads(msg.payload)
+    if "state" in item:
+        if(item['state'] == 1):
+            ser.write(b"1") 
+        else:
+            ser.write(b"2")
+    print(msg.topic+" "+str(msg.payload))
     
-    dbConn = MySQLdb.connect("localhost","pi","","assignment_db") or dle("Could not connect to database")
-    print(dbConn)
-    while(ser.in_waiting == 0):
-        pass
+    
+mqttc = paho.Client()                                       # mqttc object
+mqttc.on_connect = on_connect                               # assign on_connect func
+mqttc.on_message = on_message                               # assign on_message func
+
+#### Change following parameters #### 
+awshost = "ashixvhkiwhi7-ats.iot.ap-southeast-1.amazonaws.com"      # Endpoint
+awsport = 8883                                              # Port no.   
+clientId = "node_smartLight"                                     # Thing_Name
+thingName = "node_smartLight"                                    # Thing_Name
+caPath = "AmazonRootCA1.pem"                                      # Root_CA_Certificate_Name
+certPath = "ac69e3dec7-certificate.pem.crt"                            # <Thing_Name>.cert.pem
+keyPath = "ac69e3dec7-private.pem.key"                          # <Thing_Name>.private.key
+     
+mqttc.tls_set(caPath, certfile=certPath, keyfile=keyPath, cert_reqs=ssl.CERT_REQUIRED, tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None)  # pass parameters
+ 
+mqttc.connect(awshost, awsport, keepalive=60)               # connect to aws server
+ 
+mqttc.loop_start() 
+
+while 1==1:
+    sleep(3)
     
     preLight = valueLight
     line = ser.readline()
+    print(line)
     valueDist = int(line[18:21])
-    valueLight = int(line[24:28])
+    valueLight = int(line[24:27])
+    state = int(line[30:31])
     print(valueDist)
     print(valueLight)
+    print(line)
     
-    with dbConn:
-        cursor = dbConn.cursor()
-        cursor.execute("INSERT INTO tempLog (distance,light) VALUES (%s,%s)" %(valueDist,valueLight))
-        dbConn.commit()
-        cursor.close()
-        
-    if(valueLight <= 50):
-        pins[3]['state'] = 1
-    elif(valueLight > 50):
-        pins[3]['state'] = 0
-    
-    if(valueDist <= 600 and valueDist >= 300):
-        pins[3]['state'] = 1
-            
-        # This data will be sent to index.html (pin dictionary)
-    templateData = {
-        'pins' : pins,
-        'valueDist' : valueDist,
-        'valueLight' : valueLight,
-        'preLight' : preLight
-        }
-    
-    # Pass the template data into the template index.html and return it
-    return render_template('assignment.html', **templateData) # Function to send simple commands
+    if connflag == True:
+        paylodmsg0="{"
+        paylodmsg1="\"id\":\"light\""
+        paylodmsg2 = ",\"distance\":"
+        paylodmsg3 = ",\"light\":"
+        paylodmsg4= ",\"state\":"
+        paylodmsg5= "}"
+        paylodmsg = "{} {} {} {} {} {} {} {} {}".format(paylodmsg0,paylodmsg1, paylodmsg2, valueDist,
+                                                     paylodmsg3, valueLight, paylodmsg4, state, paylodmsg5)
+        paylodmsg = json.dumps(paylodmsg) 
+        paylodmsg_json = json.loads(paylodmsg)       
+        mqttc.publish("node_smartLight", paylodmsg_json , qos=1)        # topic: temperature # Publishing Temperature values
+        print("msg sent: node_smartLight" ) # Print sent temperature msg on console
+        print(paylodmsg_json)
 
-    
-@app.route("/<action>")
-def action(action):
-     global valueLight
-     preLight = valueLight
-     if action == 'action1' :
-         ser.write(b"1")
-         pins[3]['state'] = 1
-     if action == 'action2' :
-         ser.write(b"2")
-         pins[3]['state'] = 0
-
-     # This data will be sent to index.html (pins dictionary)
-     templateData = {
-         'pins' : pins,
-         'valueDist' : valueDist,
-         'valueLight' : valueLight,
-         'preLight' : preLight
-         }
-     return render_template('assignment.html', **templateData)
-    
-# Function with buttons that toggle (change on to off or off to on) depending on the status 
-@app.route("/<changePin>/<toggle>") 
-def toggle_function(changePin, toggle):
-     global valueLight
-     preLight = valueLight
-     # Convert the pin from the URL into an integer
-     changePin = int(changePin)
-     # Get the device name for the pin being changed
-     deviceName = pins[changePin]['name']
-     # If the action part of the URL is "on", execute the code indented below:
-     if toggle == "on":
-         # Set the pin high:
-         if changePin == 3:
-             ser.write(b"1")
-             pins[changePin]['state'] = 1
-             # Save the status message to be passed into the template:
-             message = "Turned " + deviceName + "on."
-             # If the action part of the URL is "on", execute the code indented below:
-     if toggle == "off":
-     # Set the pin high:
-         if changePin == 3:
-             ser.write(b"2")
-             pins[changePin]['state'] = 0
-             # Save the status message to be passed into the template:
-             message = "Turned " + deviceName + "off."
-     
-     # This data will be sent to index.html (pins dictionary)
-     templateData = {
-         'pins' : pins,
-         'valueDist' : valueDist,
-         'valueLight' : valueLight,
-         'preLight' : preLight
-         }
-     # Pass the template data into the template index.html and return it
-     return render_template('assignment.html', **templateData)
-
-# Main function, set up serial bus, indicate port for the webserver, and start the service
-if __name__ == "__main__" :
-    ser.flush()
-    app.run(host='0.0.0.0', port = 80, debug = True)
+    else:
+        print("waiting for connection...")

@@ -26,7 +26,10 @@
               <a class="nav-link active" aria-current="page" href="#">Inventory</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" aria-current="page" href="/facial">Facial</a>
+              <a class="nav-link" href="/light">Light</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/facial">Facial</a>
             </li>
           </ul>
         </div>
@@ -233,9 +236,6 @@
             url: `/hims/${id}/threshold/update`,
             method: "POST",
             data,
-            success: function (res) {
-              alert(res.message);
-            },
           });
         }
 

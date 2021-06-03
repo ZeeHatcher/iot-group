@@ -72,8 +72,13 @@ void loop()
       }
     }
   }
-    
-  sprintf(buffer, "Distance, Light: %04d, %04d", distVal, lightVal); // prints the value of the sensor to the serial monitor
+  if(ledVal == LOW)
+  {
+    sprintf(buffer, "Distance, Light: %04d, %04d, %02d", distVal, lightVal, 0);
+  }else if(ledVal == HIGH)
+  {
+    sprintf(buffer, "Distance, Light: %04d, %04d, %02d", distVal, lightVal, 1);
+  } // prints the value of the sensor to the serial monitor
   Serial.println(buffer);
   delay(2000);                    // wait for this much time before printing next value
 }

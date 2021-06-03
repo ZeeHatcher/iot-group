@@ -1,7 +1,7 @@
 from awscrt import auth, io, mqtt, http
 from awsiot import mqtt_connection_builder
 import boto3
-from boto3.dynamodb.conditions import Key,Attr
+from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify, g, redirect, abort
@@ -12,6 +12,14 @@ import time
 
 app = Flask(__name__)
 can_publish = False
+
+preLight = 0
+ACCESS_KEY = "AKIAXBIUDGGGO7OFZ5GZ"
+SECRET_KEY = "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"
+
+pins = {
+    3: {'name' : 'PIN 3', 'state' : 0}
+}
 
 @app.route("/")
 def index():
@@ -25,22 +33,156 @@ def dashboard():
 def inventory():
     return render_template("inventory.html")
 
-# Routes for HIMS node
-@app.route("/hims/items")
-def get_items():
-    dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table("items")
 
+@app.route("/light")
+def light():
+    global preLight
+    dynamodb = boto3.resource("dynamodb",
+                              aws_access_key_id=ACCESS_KEY,
+                              aws_secret_access_key=SECRET_KEY,
+                              region_name='ap-southeast-1')
+    table = dynamodb.Table("lightSensor")
+
+    response = table.query(Limit=1,
+                           ScanIndexForward=False,
+                           KeyConditionExpression=Key('id').eq('light'))
+
+    response2 = table.query(ScanIndexForward=True,
+                           KeyConditionExpression=Key('id').eq('light'))
+    
     items = {}
+    graph_items = {}
 
-    rows = table.scan()["Items"]
+    rows = response["Items"]
+    rows_graph = response2["Items"]
+    
+    time = 0
+    
+    for r in rows_graph:
+        if(r['timestamp']/1000 >= (time+300)):
+            time = (r['timestamp']/1000)
+            
+            if(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m') in graph_items and
+               ((graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('valueDist') == 1) or
+               (graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('state') == 1))):
+                continue
+            
+            else:
+                if(r["distance"] <= 600 and r["distance"] >= 300):
+                    r['distance'] = 1
+                else:
+                    r['distance'] = 0
+                
+                graph_items[datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')] = {
+                    'valueDist' : r["distance"],
+                    'valueLight' : r["light"],
+                    'state' : r['state']
+                }
+                
+                print(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m'),r['state'])
+            
+        else:
+            continue
+    
     for r in rows:
-        items[r["id"]] = {
-            "name": r["name"],
-            "threshold": r["threshold"],
+        pins[3]['state'] = r['state']
+        items = {
+            "pins" : pins,
+            'valueDist' : r["distance"],
+            'valueLight' : r["light"],
+            'preLight' : preLight,
+            'row_graph' : graph_items
         }
+        preLight = r["light"]
 
-    return jsonify(items)
+    return render_template("light.html", **items)
+
+@app.route("/<changePin>/<toggle>") 
+def toggle_function(changePin, toggle):
+     global preLight
+     changePin = int(changePin)
+     
+     deviceName = pins[changePin]['name']
+     
+     if toggle == "on":
+         if changePin == 3:
+             payload = { "state": 1 }
+             pins[changePin]['state'] = 1
+             
+     if toggle == "off":
+         if changePin == 3:
+             payload = { "state": 0 }
+             pins[changePin]['state'] = 0
+     
+     dynamodb = boto3.resource('dynamodb',
+                              aws_access_key_id=ACCESS_KEY,
+                              aws_secret_access_key=SECRET_KEY,
+                              region_name='ap-southeast-1')
+     table = dynamodb.Table("lightSensor")
+
+     response = table.query(Limit=1,
+                           ScanIndexForward=False,
+                           KeyConditionExpression=Key('id').eq('light'))
+
+     response2 = table.query(ScanIndexForward=True,
+                           KeyConditionExpression=Key('id').eq('light'))
+    
+     items = {}
+     graph_items = {}
+
+     rows = response["Items"]
+     rows_graph = response2["Items"]
+    
+     time = 0
+    
+     for r in rows_graph:
+        if(r['timestamp']/1000 >= (time+300)):
+            time = (r['timestamp']/1000)
+            
+            if(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m') in graph_items and
+               ((graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('valueDist') == 1) or
+               (graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('state') == 1))):
+                continue
+            
+            else:
+                if(r["distance"] <= 600 and r["distance"] >= 300):
+                    r['distance'] = 1
+                else:
+                    r['distance'] = 0
+                
+                graph_items[datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')] = {
+                    'valueDist' : r["distance"],
+                    'valueLight' : r["light"],
+                    'state' : r['state']
+                }
+                
+                print(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m'),r['state'])
+            
+        else:
+            continue
+        
+     for r in rows:
+        items = {
+            "pins" : pins,
+            'valueDist' : r["distance"],
+            'valueLight' : r["light"],
+            'preLight' : preLight,
+            'row_graph' : graph_items
+        }
+        preLight = r["light"]
+     
+     topic = 'lightSensor'
+     print("Publishing...")
+     print("\tTopic:", topic)
+     print("\tPayload:", payload)
+     publish_future, packet_id = mqtt_connection.publish(
+        topic=topic,
+        payload=json.dumps(payload),
+        qos=mqtt.QoS.AT_LEAST_ONCE)
+     publish_future.result()
+     print("Published.")
+     
+     return render_template('light.html', **items)
 
 @app.route("/hims/items/<nuid>", methods=["POST"])
 def update_item(nuid):
@@ -110,7 +252,7 @@ def get_weights():
     for r in rows:
         items[r["id"]] = {
             "name": r["name"],
-            "threshold": r["threshold"],
+            "threshold": int(r["threshold"]),
             "log": [],
             "weight": None,
             "is_depleted": None
@@ -122,11 +264,11 @@ def get_weights():
             continue
 
         items[r["id"]]["log"].append({
-            "weight": r["data"]["weight"],
-            "timestamp": r["timestamp"]
+            "weight": int(r["data"]["weight"]),
+            "timestamp": int(r["timestamp"])
         })
 
-        items[r["id"]]["weight"] = r["data"]["weight"]
+        items[r["id"]]["weight"] = int(r["data"]["weight"])
         items[r["id"]]["is_depleted"] = r["data"]["is_depleted"]
 
     return jsonify(items)
