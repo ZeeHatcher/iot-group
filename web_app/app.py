@@ -23,16 +23,11 @@ pins = {
 
 @app.route("/")
 def index():
-    return redirect("/dashboard")
-
-@app.route("/dashboard")
-def dashboard():
-    return render_template("dashboard.html")
+    return redirect("/autoblinds")
 
 @app.route("/inventory")
 def inventory():
     return render_template("inventory.html")
-
 
 @app.route("/light")
 def light():
@@ -96,6 +91,10 @@ def light():
         preLight = r["light"]
 
     return render_template("light.html", **items)
+
+@app.route("/autoblinds")
+def autoblinds():
+    return render_template("autoblinds.html")
 
 @app.route("/<changePin>/<toggle>") 
 def toggle_function(changePin, toggle):
@@ -183,6 +182,49 @@ def toggle_function(changePin, toggle):
      print("Published.")
      
      return render_template('light.html', **items)
+
+# Autoblind back-end functionality
+@app.route("/autoblinds/autoblinds")
+def get_autoblinds():
+    dynamodb = boto3.resource("dynamodb")
+    table = dynamodb.Table("autoblinds")
+
+    autoblinds = {}
+
+    rows = table.scan()["Items"]
+    for r in rows:
+        autoblinds[r["id"]] = {
+            "mode": r["mode"],
+            "motor_max_pos": int(r["motor_max_pos"]),
+            "motor_min_pos": int(r["motor_min_pos"]),
+            "location": r["location"]
+        }
+
+    return jsonify(autoblinds)
+
+@app.route("/autoblinds/data")
+def get_autoblinds_data():
+    dynamodb = boto3.resource("dynamodb")
+    table = dynamodb.Table("autoblind_data")
+
+    autoblinds = {}
+
+    rows = table.scan()["Items"]
+    for r in rows:
+        if r["id"] not in autoblinds:
+            autoblinds[r["id"]] = []
+
+        autoblinds[r["id"]].append({
+            "timestamp": r["timestamp"],
+            "light_exterior": r["data"]["light_exterior"],
+            "light_interior": r["data"]["light_interior"],
+            "mode": r["data"]["mode"],
+            "motor_pos": r["data"]["motor_pos"],
+        })
+
+    return jsonify(autoblinds)
+
+# HIMS back-end functionality
 
 @app.route("/hims/items/<nuid>", methods=["POST"])
 def update_item(nuid):
