@@ -1,7 +1,7 @@
 from awscrt import auth, io, mqtt, http
 from awsiot import mqtt_connection_builder
 import boto3
-from boto3.dynamodb.conditions import Attr
+from boto3.dynamodb.conditions import Key, Attr
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify, g, redirect, abort
