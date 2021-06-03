@@ -1,15 +1,17 @@
 from awscrt import auth, io, mqtt, http
 from awsiot import mqtt_connection_builder
 import boto3
-from boto3.dynamodb.conditions import Attr
+from boto3.dynamodb.conditions import Key,Attr
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, jsonify, g, redirect, abort
 import json
 import os
 from uuid import uuid4
+import time
 
 app = Flask(__name__)
+can_publish = False
 
 @app.route("/")
 def index():
@@ -135,25 +137,63 @@ def facial():
     return render_template("facial.html")
 
 @app.route("/add_face/<input_name>", methods=['POST'])
+#Function for toggling training mode and call edge to detect new faces
 def add_face(input_name):
+    topic = "frlock/face_recog/update"
+    payload = {
+        "isTraining": True,
+        "name": input_name
+    }
+    print("Publishing...")
+    print("\tTopic:", topic)
+    print("\tPayload:", payload)
+    publish_future, packet_id = mqtt_connection.publish(
+        topic=topic,
+        payload=json.dumps(payload),
+        qos=mqtt.QoS.AT_LEAST_ONCE)
+    publish_future.result()
+    print("Published.")
+    return "1"
+
+@app.route("/update", methods=['POST'])
+#Function for updating the website by checking if is in training mode or not
+def update_webpage():
     dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table("securitylog")
-
-    field = request.form["field"]
-    value = request.form.get("value")
-#     global training,name
-#     training = True
-#     name = input_name
-# #     templateData = {
-# #         "isTraining" : training,
-# #     }
-#     if(training):
-#         return "1"
-#     else:
-#         return "0"
+    securityLogs = dynamodb.Table("securityLogs")
+    ultrasonicLogs = dynamodb.Table("ultSensorLog")
+#     response = securityLogs.scan()["Items"]  
+    scrLogs = securityLogs.query(
+        KeyConditionExpression = Key('id').eq('scrID'),
+        Limit=1,
+        ScanIndexForward=False)
+#     print(response)
+#     print(scrLogs)
+    templateData = {}
+    for r in scrLogs["Items"]:
+        templateData["isTraining"] = r["securityLog"]["isTraining"]
+        templateData["user"] = r["securityLog"]["name"]
+        templateData["access"] = r["securityLog"]["access"]
+        templateData["image"] = r["securityLog"]["image"]
+        templateData["timestamp"] = r["timestamp"]
+#         templateData = {
+#             'isTraining' : r["securityLog"]["isTraining"]
+#         }
+        
+    ultLogs = ultrasonicLogs.query(
+        KeyConditionExpression = Key('id').eq('ultrasonicID'),
+        Limit=1,
+        ScanIndexForward=False)
     
+    for a in ultLogs["Items"]:
+        templateData["distance"] = a["ultrasonicLog"]["distance"]
+        
+    return jsonify(templateData)
     
 
+@app.route("/video_feed")
+def video_feed():
+    return Response(generate(),mimetype = "multipart/x-mixed-replace; boundary=frame")
+    
 if __name__ == "__main__":
     # Load .env file for development
     load_dotenv()

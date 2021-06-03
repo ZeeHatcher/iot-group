@@ -1,3 +1,4 @@
 *.swp
 .env
 .certs
+node_frLock/images
