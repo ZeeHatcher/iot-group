@@ -219,11 +219,11 @@ def get_autoblinds_data():
             autoblinds[r["id"]] = []
 
         autoblinds[r["id"]].append({
-            "timestamp": r["timestamp"],
-            "light_exterior": r["data"]["light_exterior"],
-            "light_interior": r["data"]["light_interior"],
+            "timestamp": int(r["timestamp"]),
+            "light_exterior": int(r["data"]["light_exterior"]),
+            "light_interior": int(r["data"]["light_interior"]),
             "mode": r["data"]["mode"],
-            "motor_pos": r["data"]["motor_pos"],
+            "motor_pos": int(r["data"]["motor_pos"]),
         })
 
     return jsonify(autoblinds)
@@ -418,7 +418,7 @@ def update_webpage():
         templateData["user"] = r["securityLog"]["name"]
         templateData["access"] = r["securityLog"]["access"]
         templateData["image"] = r["securityLog"]["image"]
-        templateData["timestamp"] = r["timestamp"]
+        templateData["timestamp"] = int(r["timestamp"])
 #         templateData = {
 #             'isTraining' : r["securityLog"]["isTraining"]
 #         }
@@ -429,7 +429,7 @@ def update_webpage():
         ScanIndexForward=False)
     
     for a in ultLogs["Items"]:
-        templateData["distance"] = a["ultrasonicLog"]["distance"]
+        templateData["distance"] = int(a["ultrasonicLog"]["distance"])
         
     return jsonify(templateData)
     
