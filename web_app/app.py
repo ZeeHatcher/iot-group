@@ -15,8 +15,6 @@ app = Flask(__name__)
 can_publish = False
 
 preLight = 0
-ACCESS_KEY = "AKIAXBIUDGGGO7OFZ5GZ"
-SECRET_KEY = "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"
 
 pins = {
     3: {'name' : 'PIN 3', 'state' : 0}
@@ -44,10 +42,7 @@ def inventory():
 @app.route("/light")
 def light():
     global preLight
-    dynamodb = boto3.resource("dynamodb",
-                              aws_access_key_id=ACCESS_KEY,
-                              aws_secret_access_key=SECRET_KEY,
-                              region_name='ap-southeast-1')
+    dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table("lightSensor")
 
     response = table.query(Limit=1,
@@ -125,10 +120,7 @@ def toggle_function(changePin, toggle):
              payload = { "state": 0 }
              pins[changePin]['state'] = 0
      
-     dynamodb = boto3.resource('dynamodb',
-                              aws_access_key_id=ACCESS_KEY,
-                              aws_secret_access_key=SECRET_KEY,
-                              region_name='ap-southeast-1')
+     dynamodb = boto3.resource('dynamodb')
      table = dynamodb.Table("lightSensor")
 
      response = table.query(Limit=1,
