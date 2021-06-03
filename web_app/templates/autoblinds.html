@@ -46,22 +46,19 @@
         </div>
         <div class="card-body">
           <div class="text-center">
-            <div class="input-group w-50 m-auto">
-              <input name="motor-pos" type="number" class="form-control text-center fs-2">
-            </div>
-            <span class="label d-block">current position</span>
+            <span name="current-position" class="fs-1">-</span>%<br><span class="label d-block">current position</span>
           </div>
 
           <div class="d-flex">
             <div class="text-center w-100">
               <div>
-                <span name="light-exterior" class="fs-3">39</span>
+                <span name="light-exterior" class="fs-3">-</span>
               </div>
               <span class="label d-block">exterior light</span>
             </div>
             <div class="text-center w-100">
               <div>
-                <span name="light-interior" class="fs-3">47</span>
+                <span name="light-interior" class="fs-3">-</span>
               </div>
               <span class="label d-block">interior light</span>
             </div>
@@ -80,14 +77,21 @@
           <div class="d-flex text-center mt-3">
             <div class="w-100">
               <div class="input-group input-group-sm">
-                <input name="motor-min-pos" type="number" class="form-control">
+                <input name="motor-min-pos" type="number" class="form-control text-center" value="0">
               </div>
               <span class="label d-block">min</span>
             </div>
 
             <div class="w-100">
               <div class="input-group input-group-sm">
-                <input name="motor-max-pos" type="number" class="form-control">
+                <input name="motor-pos" type="number" class="form-control text-center" value="0">
+              </div>
+              <span class="label d-block">desired</span>
+            </div>
+
+            <div class="w-100">
+              <div class="input-group input-group-sm">
+                <input name="motor-max-pos" type="number" class="form-control text-center" value="0">
               </div>
               <span class="label d-block">max</span>
             </div>
@@ -128,10 +132,10 @@
                 dom.removeClass("d-none");
 
                 // Update card details
-                dom.find("div[name='location']").text(snakeToPascal(data["location"]));
-                dom.find("input[name='motor-min-pos']").val(data["motor_min_pos"]);
-                dom.find("input[name='motor-max-pos']").val(data["motor_max_pos"]);
-                dom.find("input[name='switch-mode']").prop("checked", data["mode"] == "auto");
+                dom.find("[name='location']").text(snakeToPascal(data["location"]));
+                dom.find("[name='motor-min-pos']").val(data["motor_min_pos"]);
+                dom.find("[name='motor-max-pos']").val(data["motor_max_pos"]);
+                dom.find("[name='switch-mode']").prop("checked", data["mode"] == "auto");
 
                 // Add DOM to page
                 dom.appendTo("#autoblinds");
@@ -160,9 +164,9 @@
                 let latest = data[data.length - 1];
 
                 // Update card details
-                dom.find("input[name='motor-pos']").val(latest["motor_pos"]);
-                dom.find("span[name='light-exterior']").text(latest["light_exterior"]);
-                dom.find("span[name='light-interior']").text(latest["light_interior"]);
+                dom.find("[name='current-position']").text(latest["motor_pos"]);
+                dom.find("[name='light-exterior']").text(latest["light_exterior"]);
+                dom.find("[name='light-interior']").text(latest["light_interior"]);
               }
             },
           });
@@ -172,8 +176,15 @@
           let root = $(this).parentsUntil("#autoblinds", ".col");
           let id = root.attr("id");
 
+          let pos = root.find("[name='motor-pos']").val();
+
+          if (pos < 0 || pos > 100) {
+            alert("Invalid desired position.");
+            return;
+          }
+
           let data = {
-            "motor_pos": root.find("[name='motor-pos']").val(),
+            "motor_pos": pos,
             "motor_min_pos": root.find("[name='motor-min-pos']").val(),
             "motor_max_pos": root.find("[name='motor-max-pos']").val(),
           };

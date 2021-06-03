@@ -21,6 +21,17 @@ pins = {
     3: {'name' : 'PIN 3', 'state' : 0}
 }
 
+def publish_to_topic(topic, payload):
+     print("Publishing...")
+     print("\tTopic:", topic)
+     print("\tPayload:", payload)
+     publish_future, packet_id = mqtt_connection.publish(
+        topic=topic,
+        payload=json.dumps(payload),
+        qos=mqtt.QoS.AT_LEAST_ONCE)
+     publish_future.result()
+     print("Published.")
+
 @app.route("/")
 def index():
     return redirect("/autoblinds")
@@ -171,15 +182,7 @@ def toggle_function(changePin, toggle):
         preLight = r["light"]
      
      topic = 'lightSensor'
-     print("Publishing...")
-     print("\tTopic:", topic)
-     print("\tPayload:", payload)
-     publish_future, packet_id = mqtt_connection.publish(
-        topic=topic,
-        payload=json.dumps(payload),
-        qos=mqtt.QoS.AT_LEAST_ONCE)
-     publish_future.result()
-     print("Published.")
+     publish_to_topic(topic, payload)
      
      return render_template('light.html', **items)
 
@@ -228,6 +231,15 @@ def get_autoblinds_data():
 def update_autoblind(blind_id):
     dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table("autoblinds")
+    
+    topic = "autoblinds/{}/set".format(blind_id)
+    payload = {
+        "motor_max_pos": request.form.get("motor_max_pos"),
+        "motor_min_pos": request.form.get("motor_min_pos"),
+        "motor_pos": request.form.get("motor_pos")
+    }
+
+    publish_to_topic(topic, payload)
 
     try:
         response = table.update_item(
@@ -258,6 +270,13 @@ def update_autoblind(blind_id):
 def update_autoblind_mode(blind_id):
     dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table("autoblinds")
+    
+    topic = "autoblinds/{}/set".format(blind_id)
+    payload = {
+        "mode": request.form.get("mode")
+    }
+
+    publish_to_topic(topic, payload)
 
     try:
         response = table.update_item(
@@ -322,18 +341,9 @@ def notify_threshold_update(nuid):
     value = int(request.form.get("value"))
 
     topic = "hims/{}/threshold/update".format(nuid)
-    print(type(value))
     payload = { "threshold": value }
 
-    print("Publishing...")
-    print("\tTopic:", topic)
-    print("\tPayload:", payload)
-    publish_future, packet_id = mqtt_connection.publish(
-        topic=topic,
-        payload=json.dumps(payload),
-        qos=mqtt.QoS.AT_LEAST_ONCE)
-    publish_future.result()
-    print("Published.")
+    publish_to_topic(topic, payload)
 
     res = { "status": 200, "message": "Successfully published notification." }
 
@@ -385,15 +395,7 @@ def add_face(input_name):
         "isTraining": True,
         "name": input_name
     }
-    print("Publishing...")
-    print("\tTopic:", topic)
-    print("\tPayload:", payload)
-    publish_future, packet_id = mqtt_connection.publish(
-        topic=topic,
-        payload=json.dumps(payload),
-        qos=mqtt.QoS.AT_LEAST_ONCE)
-    publish_future.result()
-    print("Published.")
+    publish_to_topic(topic, payload)
     return "1"
 
 @app.route("/update", methods=['POST'])
