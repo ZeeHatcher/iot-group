@@ -44,17 +44,52 @@ def light():
     response = table.query(Limit=1,
                            ScanIndexForward=False,
                            KeyConditionExpression=Key('id').eq('light'))
+
+    response2 = table.query(ScanIndexForward=True,
+                           KeyConditionExpression=Key('id').eq('light'))
     
     items = {}
+    graph_items = {}
 
     rows = response["Items"]
+    rows_graph = response2["Items"]
+    
+    time = 0
+    
+    for r in rows_graph:
+        if(r['timestamp']/1000 >= (time+300)):
+            time = (r['timestamp']/1000)
+            
+            if(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m') in graph_items and
+               ((graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('valueDist') == 1) or
+               (graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('state') == 1))):
+                continue
+            
+            else:
+                if(r["distance"] <= 600 and r["distance"] >= 300):
+                    r['distance'] = 1
+                else:
+                    r['distance'] = 0
+                
+                graph_items[datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')] = {
+                    'valueDist' : r["distance"],
+                    'valueLight' : r["light"],
+                    'state' : r['state']
+                }
+                
+                print(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m'),r['state'])
+            
+        else:
+            continue
+    
     for r in rows:
         pins[3]['state'] = r['state']
         items = {
             "pins" : pins,
             'valueDist' : r["distance"],
             'valueLight' : r["light"],
-            'preLight' : preLight
+            'preLight' : preLight,
+            'row_graph' : graph_items
         }
         preLight = r["light"]
 
@@ -86,16 +121,51 @@ def toggle_function(changePin, toggle):
      response = table.query(Limit=1,
                            ScanIndexForward=False,
                            KeyConditionExpression=Key('id').eq('light'))
+
+     response2 = table.query(ScanIndexForward=True,
+                           KeyConditionExpression=Key('id').eq('light'))
     
      items = {}
+     graph_items = {}
 
      rows = response["Items"]
+     rows_graph = response2["Items"]
+    
+     time = 0
+    
+     for r in rows_graph:
+        if(r['timestamp']/1000 >= (time+300)):
+            time = (r['timestamp']/1000)
+            
+            if(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m') in graph_items and
+               ((graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('valueDist') == 1) or
+               (graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('state') == 1))):
+                continue
+            
+            else:
+                if(r["distance"] <= 600 and r["distance"] >= 300):
+                    r['distance'] = 1
+                else:
+                    r['distance'] = 0
+                
+                graph_items[datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')] = {
+                    'valueDist' : r["distance"],
+                    'valueLight' : r["light"],
+                    'state' : r['state']
+                }
+                
+                print(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m'),r['state'])
+            
+        else:
+            continue
+        
      for r in rows:
         items = {
             "pins" : pins,
             'valueDist' : r["distance"],
             'valueLight' : r["light"],
-            'preLight' : preLight
+            'preLight' : preLight,
+            'row_graph' : graph_items
         }
         preLight = r["light"]
      
@@ -111,7 +181,6 @@ def toggle_function(changePin, toggle):
      print("Published.")
      
      return render_template('light.html', **items)
-
 
 @app.route("/hims/items/<nuid>", methods=["POST"])
 def update_item(nuid):

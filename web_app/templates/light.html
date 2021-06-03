@@ -54,7 +54,15 @@
 
                 <input type="radio" class="btn-check" name="kitchen-options-outlined" id="kitchen-secondary-outlined" autocomplete="off" onclick="clickButton()">
                 <label class="btn btn-outline-secondary" for="kitchen-secondary-outlined">OFF</label>
+                
                 <div class="container mt-5"></div>
+
+                <div>
+                    <p>*1=ON/YES &emsp; 0=OFF/NO</p>
+                    <canvas id="lineChart"></canvas>
+                </div>
+
+                <hr>
 
                 <h5 class="card-title" id="des_light_kitchen">Sunrise</h5>
                 <h5 class="card-title" id="des_dist_kitchen">There is no people walked by</h5>
@@ -77,6 +85,14 @@
                 <label class="btn btn-outline-secondary" for="bedroom-secondary-outlined">OFF</label>
                 
                 <div class="container mt-5"></div>
+                
+
+                <div>
+                    <p>*1=ON/YES &emsp; 0=OFF/NO</p>
+                    <canvas id="lineChart2"></canvas>
+                </div>
+
+                <hr>
 
                 <h5 class="card-title" id="des_light_bedroom">Sunrise</h5>
                 <h5 class="card-title" id="des_dist_bedroom">There is no people walked by</h5>
@@ -98,6 +114,88 @@
           window.location.href = "/4/off";
         }
       }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      var ctxL = document.getElementById("lineChart").getContext('2d');
+      var myLineChart = new Chart(ctxL, {
+        type: 'line',
+        data: {
+          labels: [{% for data in row_graph %}
+                      "{{ data }}",
+                   {% endfor %}],
+          datasets: [{
+              label: "Light",
+              data: [{% for data in row_graph %}
+                      {{ row_graph[data].state }},
+                     {% endfor %}],
+              backgroundColor: [
+                'rgba(105, 0, 132, .2)',
+              ],
+              borderColor: [
+                'rgba(200, 99, 132, .7)',
+              ],
+              borderWidth: 1
+            },
+            {
+              label: "People walked by",
+              data: [{% for data in row_graph %}
+                      {{ row_graph[data].valueDist }},
+                     {% endfor %}],
+              backgroundColor: [
+                'rgba(0, 137, 132, .2)',
+              ],
+              borderColor: [
+                'rgba(0, 10, 130, .7)',
+              ],
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true
+        }
+      });
+      
+       var ctxL = document.getElementById("lineChart2").getContext('2d');
+       var myLineChart = new Chart(ctxL, {
+        type: 'line',
+        data: {
+          labels: [{% for data in row_graph2 %}
+                      "{{ data }}",
+                   {% endfor %}],
+          datasets: [{
+              label: "Light",
+              data: [{% for data in row_graph2 %}
+                      {{ row_graph[data].state }},
+                   {% endfor %}],
+              backgroundColor: [
+                'rgba(105, 0, 132, .2)',
+              ],
+              borderColor: [
+                'rgba(200, 99, 132, .7)',
+              ],
+              borderWidth: 1
+            },
+            {
+              label: "People walked by",
+              data: [{% for data in row_graph2 %}
+                      {{ row_graph[data].valueDist }}
+                   {% endfor %}],
+              backgroundColor: [
+                'rgba(0, 137, 132, .2)',
+              ],
+              borderColor: [
+                'rgba(0, 10, 130, .7)',
+              ],
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true
+        }
+      });
     </script>
 
 	{% for pin in pins %}
