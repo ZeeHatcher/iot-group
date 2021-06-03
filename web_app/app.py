@@ -8,8 +8,10 @@ from flask import Flask, render_template, request, jsonify, g, redirect, abort
 import json
 import os
 from uuid import uuid4
+import time
 
 app = Flask(__name__)
+can_publish = False
 
 preLight = 0
 ACCESS_KEY = "AKIAXBIUDGGGO7OFZ5GZ"
@@ -39,17 +41,52 @@ def light():
     response = table.query(Limit=1,
                            ScanIndexForward=False,
                            KeyConditionExpression=Key('id').eq('light'))
+
+    response2 = table.query(ScanIndexForward=True,
+                           KeyConditionExpression=Key('id').eq('light'))
     
     items = {}
+    graph_items = {}
 
     rows = response["Items"]
+    rows_graph = response2["Items"]
+    
+    time = 0
+    
+    for r in rows_graph:
+        if(r['timestamp']/1000 >= (time+300)):
+            time = (r['timestamp']/1000)
+            
+            if(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m') in graph_items and
+               ((graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('valueDist') == 1) or
+               (graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('state') == 1))):
+                continue
+            
+            else:
+                if(r["distance"] <= 600 and r["distance"] >= 300):
+                    r['distance'] = 1
+                else:
+                    r['distance'] = 0
+                
+                graph_items[datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')] = {
+                    'valueDist' : r["distance"],
+                    'valueLight' : r["light"],
+                    'state' : r['state']
+                }
+                
+                print(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m'),r['state'])
+            
+        else:
+            continue
+    
     for r in rows:
         pins[3]['state'] = r['state']
         items = {
             "pins" : pins,
             'valueDist' : r["distance"],
             'valueLight' : r["light"],
-            'preLight' : preLight
+            'preLight' : preLight,
+            'row_graph' : graph_items
         }
         preLight = r["light"]
 
@@ -85,16 +122,51 @@ def toggle_function(changePin, toggle):
      response = table.query(Limit=1,
                            ScanIndexForward=False,
                            KeyConditionExpression=Key('id').eq('light'))
+
+     response2 = table.query(ScanIndexForward=True,
+                           KeyConditionExpression=Key('id').eq('light'))
     
      items = {}
+     graph_items = {}
 
      rows = response["Items"]
+     rows_graph = response2["Items"]
+    
+     time = 0
+    
+     for r in rows_graph:
+        if(r['timestamp']/1000 >= (time+300)):
+            time = (r['timestamp']/1000)
+            
+            if(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m') in graph_items and
+               ((graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('valueDist') == 1) or
+               (graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('state') == 1))):
+                continue
+            
+            else:
+                if(r["distance"] <= 600 and r["distance"] >= 300):
+                    r['distance'] = 1
+                else:
+                    r['distance'] = 0
+                
+                graph_items[datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')] = {
+                    'valueDist' : r["distance"],
+                    'valueLight' : r["light"],
+                    'state' : r['state']
+                }
+                
+                print(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m'),r['state'])
+            
+        else:
+            continue
+        
      for r in rows:
         items = {
             "pins" : pins,
             'valueDist' : r["distance"],
             'valueLight' : r["light"],
-            'preLight' : preLight
+            'preLight' : preLight,
+            'row_graph' : graph_items
         }
         preLight = r["light"]
      
@@ -153,6 +225,7 @@ def get_autoblinds_data():
     return jsonify(autoblinds)
 
 # HIMS back-end functionality
+
 @app.route("/hims/items/<nuid>", methods=["POST"])
 def update_item(nuid):
     dynamodb = boto3.resource("dynamodb")
@@ -242,8 +315,69 @@ def get_weights():
 
     return jsonify(items)
 
+#Security
+@app.route("/facial")
+def facial():
+    return render_template("facial.html")
 
+@app.route("/add_face/<input_name>", methods=['POST'])
+#Function for toggling training mode and call edge to detect new faces
+def add_face(input_name):
+    topic = "frlock/face_recog/update"
+    payload = {
+        "isTraining": True,
+        "name": input_name
+    }
+    print("Publishing...")
+    print("\tTopic:", topic)
+    print("\tPayload:", payload)
+    publish_future, packet_id = mqtt_connection.publish(
+        topic=topic,
+        payload=json.dumps(payload),
+        qos=mqtt.QoS.AT_LEAST_ONCE)
+    publish_future.result()
+    print("Published.")
+    return "1"
 
+@app.route("/update", methods=['POST'])
+#Function for updating the website by checking if is in training mode or not
+def update_webpage():
+    dynamodb = boto3.resource("dynamodb")
+    securityLogs = dynamodb.Table("securityLogs")
+    ultrasonicLogs = dynamodb.Table("ultSensorLog")
+#     response = securityLogs.scan()["Items"]  
+    scrLogs = securityLogs.query(
+        KeyConditionExpression = Key('id').eq('scrID'),
+        Limit=1,
+        ScanIndexForward=False)
+#     print(response)
+#     print(scrLogs)
+    templateData = {}
+    for r in scrLogs["Items"]:
+        templateData["isTraining"] = r["securityLog"]["isTraining"]
+        templateData["user"] = r["securityLog"]["name"]
+        templateData["access"] = r["securityLog"]["access"]
+        templateData["image"] = r["securityLog"]["image"]
+        templateData["timestamp"] = r["timestamp"]
+#         templateData = {
+#             'isTraining' : r["securityLog"]["isTraining"]
+#         }
+        
+    ultLogs = ultrasonicLogs.query(
+        KeyConditionExpression = Key('id').eq('ultrasonicID'),
+        Limit=1,
+        ScanIndexForward=False)
+    
+    for a in ultLogs["Items"]:
+        templateData["distance"] = a["ultrasonicLog"]["distance"]
+        
+    return jsonify(templateData)
+    
+
+@app.route("/video_feed")
+def video_feed():
+    return Response(generate(),mimetype = "multipart/x-mixed-replace; boundary=frame")
+    
 if __name__ == "__main__":
     # Load .env file for development
     load_dotenv()
