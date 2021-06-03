@@ -224,8 +224,65 @@ def get_autoblinds_data():
 
     return jsonify(autoblinds)
 
-# HIMS back-end functionality
+@app.route("/autoblinds/<blind_id>", methods=["POST"])
+def update_autoblind(blind_id):
+    dynamodb = boto3.resource("dynamodb")
+    table = dynamodb.Table("autoblinds")
 
+    try:
+        response = table.update_item(
+            Key={
+                "id": blind_id
+            },
+            UpdateExpression="SET #mx = :mx, #mn = :mn",
+            ConditionExpression=Attr("id").eq(blind_id),
+            ExpressionAttributeNames={
+                "#mx": "motor_max_pos",
+                "#mn": "motor_min_pos",
+            },
+            ExpressionAttributeValues={
+                ":mx": request.form.get("motor_max_pos"),
+                ":mn": request.form.get("motor_min_pos"),
+            },
+            ReturnValues="UPDATED_NEW"
+        )
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+            return jsonify({ "status": 400, "message": "Invalid ID." })
+
+    res = { "status": 200, "message": "Successfully updated autoblind." }
+
+    return jsonify(res)
+
+@app.route("/autoblinds/<blind_id>/mode", methods=["POST"])
+def update_autoblind_mode(blind_id):
+    dynamodb = boto3.resource("dynamodb")
+    table = dynamodb.Table("autoblinds")
+
+    try:
+        response = table.update_item(
+            Key={
+                "id": blind_id
+            },
+            UpdateExpression="SET #m = :m",
+            ConditionExpression=Attr("id").eq(blind_id),
+            ExpressionAttributeNames={
+                "#m": "mode",
+            },
+            ExpressionAttributeValues={
+                ":m": request.form.get("mode"),
+            },
+            ReturnValues="UPDATED_NEW"
+        )
+    except ClientError as e:
+        if e.response['Error']['Code'] == 'ConditionalCheckFailedException':
+            return jsonify({ "status": 400, "message": "Invalid ID." })
+
+    res = { "status": 200, "message": "Successfully updated autoblind mode." }
+
+    return jsonify(res)
+
+# HIMS back-end functionality
 @app.route("/hims/items/<nuid>", methods=["POST"])
 def update_item(nuid):
     dynamodb = boto3.resource("dynamodb")
