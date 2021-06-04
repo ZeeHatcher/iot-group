@@ -31,9 +31,9 @@ int light_exterior_value = 0;             //  Light Sensor 2
 AccelStepper stepper = AccelStepper(MotorInterfaceType, motorPin1, motorPin3, motorPin2, motorPin4);
 int ROTATION = 2 * 2038;
 int MOTOR_MAX_POS = 5 * ROTATION;
-int MOTOR_MIN_POS = 0;
+int MOTOR_MIN_POS = -5 * ROTATION;
 int MOTOR_INCREMENT = 0.1 * ROTATION;
-int motor_pos = 0;            // Initial position at max pos
+int motor_pos = MOTOR_MAX_POS;            // Initial position at max pos
 
 
 // -------------------   FUNCTIONS    ------------------------ //
@@ -65,13 +65,10 @@ void lcd_print() {
   lcd.print(":");
   lcd.print(myRTC.seconds);
   
-  lcd.setCursor(10,0);
+  lcd.setCursor(13,0);
   lcd.print(light_interior_value);
-  lcd.setCursor(10,1);
-  lcd.print(light_exterior_value);
-
   lcd.setCursor(13,1);
-  lcd.print(motor_pos);
+  lcd.print(light_exterior_value);
 }
 
 void receiveIR() {
@@ -108,10 +105,8 @@ void push_data() {
   Serial.println(motor_pos);
 }
 
-void receive_data() {
-  if (Serial.available() > 0){
-    motor_pos = Serial.parseInt();
-  }
+void receive_date() {
+  
 }
 
 // -------------------     SETUP     ------------------------ //
@@ -136,10 +131,7 @@ void setup() {
 void loop() {
   read_light_sensor();
   myRTC.updateTime();
-  
   receiveIR();
-  
-  receive_data();
   
   stepper.moveTo(motor_pos);  // Set target position
   stepper.runToPosition();    // Run to position with set speed and acceleration
