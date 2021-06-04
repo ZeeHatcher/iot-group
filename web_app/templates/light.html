@@ -200,46 +200,47 @@
       });
     </script>
 
-	{% for pin in pins %}
-        	{% if pin == 3%} 
-			{% if valueDist <= 600 and valueDist >= 300 %}
-			  <script>document.getElementById("des_dist_kitchen").innerHTML = "People Walked By";</script>
-			{% else %}
-			  <script>document.getElementById("des_dist_kitchen").innerHTML = "There is no people walked by";</script>
-			{% endif %}
+	  {% for pin in pins %}
+        {% if pin == 3%} 
+		    	{% if valueDist <= 600 and valueDist >= 300 %}
+			      <script>document.getElementById("des_dist_kitchen").innerHTML = "People Walked By";</script>
+			    {% else %}
+			      <script>document.getElementById("des_dist_kitchen").innerHTML = "There is no people walked by";</script>
+			    {% endif %}
 
-			{% if (valueLight <= 50 and valueLight != 0) or (preLight <= 50) %}
-			  <script>document.getElementById("des_light_kitchen").innerHTML = "Moon";</script>
-			{% else %}
-			  <script>document.getElementById("des_light_kitchen").innerHTML = "Sun";</script>
-			{% endif %}
-		{% else %}
-			{% if valueDist2 <= 600 and valueDist2 >= 300 %}
-			  <script>document.getElementById("des_dist_bedroom").innerHTML = "People Walked By";</script>
-			{% else %}
-			  <script>document.getElementById("des_dist_bedroom").innerHTML = "There is no people walked by";</script>
-			{% endif %}
+        {% if (valueLight <= 50 and valueLight != 0) %}
+          <script>document.getElementById("des_light_kitchen").innerHTML = "Moon";</script>
+			  {% else %}
+			    <script>document.getElementById("des_light_kitchen").innerHTML = "Sun";</script>
+			  {% endif %}
+		  
+      {% else %}
+			  {% if valueDist2 <= 600 and valueDist2 >= 300 %}
+			    <script>document.getElementById("des_dist_bedroom").innerHTML = "People Walked By";</script>
+			  {% else %}
+			    <script>document.getElementById("des_dist_bedroom").innerHTML = "There is no people walked by";</script>
+			  {% endif %}
 
-			{% if (valueLight2 <= 50 and valueLight2 != 0) or (preLight2 <= 50) %}
-			  <script>document.getElementById("des_light_bedroom").innerHTML = "Moon";</script>
-			{% else %}
-			  <script>document.getElementById("des_light_bedroom").innerHTML = "Sun";</script>
-			{% endif %}
-		{% endif %}
+			  {% if (valueLight2 <= 50 and valueLight2 != 0) %}
+			    <script>document.getElementById("des_light_bedroom").innerHTML = "Moon";</script>
+			  {% else %}
+			    <script>document.getElementById("des_light_bedroom").innerHTML = "Sun";</script>
+			  {% endif %}
+		  {% endif %}
     {% endfor %}
 
     {% for pin in pins %}
-        {% if pins[pin].state == 1 and pin == 3 %} 
-            <script>document.getElementById("kitchen-success-outlined").checked = true;</script>
-	{% elif pins[pin].state == 0 and pin == 3 %}
+      {% if pins[pin].state == 1 and pin == 3 %} 
+          <script>document.getElementById("kitchen-success-outlined").checked = true;</script>
+	    {% elif pins[pin].state == 0 and pin == 3 %}
           <script>document.getElementById("kitchen-secondary-outlined").checked = true;</script>
-        {% endif %}
+      {% endif %}
         
-	{% if pins[pin].state == 1 and pin == 4 %}
+	    {% if pins[pin].state == 1 and pin == 4 %}
           <script>document.getElementById("bedroom-success-outlined").checked = true;</script>
-	{% elif pins[pin].state == 0 and pin == 4 %}
+	    {% elif pins[pin].state == 0 and pin == 4 %}
           <script>document.getElementById("bedroom-secondary-outlined").checked = true;</script>
-        {% endif %}
+      {% endif %}
     {% endfor %}
 		
 	</body>
