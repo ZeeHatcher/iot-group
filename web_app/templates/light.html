@@ -163,13 +163,13 @@
        var myLineChart = new Chart(ctxL, {
         type: 'line',
         data: {
-          labels: [{% for data in row_graph2 %}
-                      "{{ data }}",
+          labels: [{% for dt in row2 %}
+                      "{{ dt }}",
                    {% endfor %}],
           datasets: [{
               label: "Light",
-              data: [{% for data in row_graph2 %}
-                      {{ row_graph[data].state }},
+              data: [{% for dt in row2 %}
+                      {{ row2[dt].state }},
                    {% endfor %}],
               backgroundColor: [
                 'rgba(105, 0, 132, .2)',
@@ -181,8 +181,8 @@
             },
             {
               label: "People walked by",
-              data: [{% for data in row_graph2 %}
-                      {{ row_graph[data].valueDist }}
+              data: [{% for dt in row2 %}
+                      {{ row2[dt].valueDist }},
                    {% endfor %}],
               backgroundColor: [
                 'rgba(0, 137, 132, .2)',
@@ -214,13 +214,13 @@
           <script>document.getElementById("des_light_kitchen").innerHTML = "Sun";</script>
         {% endif %}
 	{% else %}
-        {% if valueDist <= 600 and valueDist >= 300 %}
+        {% if valueDist2 <= 600 and valueDist2 >= 300 %}
           <script>document.getElementById("des_dist_bedroom").innerHTML = "People Walked By";</script>
         {% else %}
           <script>document.getElementById("des_dist_bedroom").innerHTML = "There is no people walked by";</script>
         {% endif %}
 
-        {% if (valueLight <= 50 and valueLight != 0) or (preLight <= 50) %}
+        {% if (valueLight2 <= 50 and valueLight2 != 0) or (preLight2 <= 50) %}
           <script>document.getElementById("des_light_bedroom").innerHTML = "Moon";</script>
         {% else %}
           <script>document.getElementById("des_light_bedroom").innerHTML = "Sun";</script>

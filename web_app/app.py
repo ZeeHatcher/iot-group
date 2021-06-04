@@ -17,7 +17,8 @@ can_publish = False
 preLight = 0
 
 pins = {
-    3: {'name' : 'PIN 3', 'state' : 0}
+    3: {'name' : 'PIN 3', 'state' : 0},
+    4: {'name' : 'PIN 4', 'state' : 0}
 }
 
 def publish_to_topic(topic, payload):
@@ -42,7 +43,10 @@ def inventory():
 @app.route("/light")
 def light():
     global preLight
-    dynamodb = boto3.resource("dynamodb")
+    dynamodb = boto3.resource("dynamodb",
+                              aws_access_key_id=ACCESS_KEY,
+                              aws_secret_access_key=SECRET_KEY,
+                              region_name='ap-southeast-1')
     table = dynamodb.Table("lightSensor")
 
     response = table.query(Limit=1,
@@ -51,40 +55,73 @@ def light():
 
     response2 = table.query(ScanIndexForward=True,
                            KeyConditionExpression=Key('id').eq('light'))
+
+    response_1 = table.query(Limit=1,
+                           ScanIndexForward=False,
+                           KeyConditionExpression=Key('id').eq('light2'))
+
+    response_2 = table.query(ScanIndexForward=True,
+                           KeyConditionExpression=Key('id').eq('light2'))
     
     items = {}
     graph_items = {}
+    graph_items2 = {}
 
     rows = response["Items"]
     rows_graph = response2["Items"]
     
-    time = 0
+    rows2 = response_1["Items"]
+    rows_graph2 = response_2["Items"]
+    
+    state_light = None
+    state_distance = None
     
     for r in rows_graph:
-        if(r['timestamp']/1000 >= (time+300)):
-            time = (r['timestamp']/1000)
-            
-            if(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m') in graph_items and
-               ((graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('valueDist') == 1) or
-               (graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('state') == 1))):
-                continue
-            
-            else:
-                if(r["distance"] <= 600 and r["distance"] >= 300):
-                    r['distance'] = 1
-                else:
-                    r['distance'] = 0
-                
-                graph_items[datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')] = {
-                    'valueDist' : r["distance"],
-                    'valueLight' : r["light"],
-                    'state' : r['state']
-                }
-                
-                print(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m'),r['state'])
-            
+        if(r["distance"] <= 600 and r["distance"] >= 300):
+            r['distance'] = 1
         else:
-            continue
+            r['distance'] = 0
+        
+        if(state_light != None and state_distance != None):
+            if(r['state'] == state_light and r['distance'] == state_distance):
+                continue
+            else:
+                state_light = r['state'];
+                state_distance = r['distance']
+        else:
+            state_light = r['state'];
+            state_distance = r['distance']
+        
+        graph_items[datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%M')] = {
+            'valueDist' : r["distance"],
+            'valueLight' : r["light"],
+            'state' : r['state']
+        }
+        
+    state_light = None
+    state_distance = None
+    
+    for r in rows_graph2:
+        if(r["distance"] <= 600 and r["distance"] >= 300):
+            r['distance'] = 1
+        else:
+            r['distance'] = 0
+        
+        if(state_light != None and state_distance != None):
+            if(r['state'] == state_light and r['distance'] == state_distance):
+                continue
+            else:
+                state_light = r['state'];
+                state_distance = r['distance']
+        else:
+            state_light = r['state'];
+            state_distance = r['distance']
+            
+        graph_items2[datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%M')] = {
+            'valueDist' : r["distance"],
+            'valueLight' : r["light"],
+            'state' : r['state']
+        }
     
     for r in rows:
         pins[3]['state'] = r['state']
@@ -96,12 +133,19 @@ def light():
             'row_graph' : graph_items
         }
         preLight = r["light"]
+        
+    for r in rows2:
+        pins[4]['state'] = r['state']
+        items.update({
+            "pins" : pins,
+            'valueDist2' : r["distance"],
+            'valueLight2' : r["light"],
+            'preLight2' : preLight,
+            'row2' : graph_items2
+        })
+        preLight = r["light"]
 
     return render_template("light.html", **items)
-
-@app.route("/autoblinds")
-def autoblinds():
-    return render_template("autoblinds.html")
 
 @app.route("/<changePin>/<toggle>") 
 def toggle_function(changePin, toggle):
@@ -114,13 +158,22 @@ def toggle_function(changePin, toggle):
          if changePin == 3:
              payload = { "state": 1 }
              pins[changePin]['state'] = 1
+         else:
+             payload = { "state": 1 }
+             pins[changePin]['state'] = 1
              
      if toggle == "off":
          if changePin == 3:
              payload = { "state": 0 }
              pins[changePin]['state'] = 0
+         else:
+             payload = { "state": 0 }
+             pins[changePin]['state'] = 0
      
-     dynamodb = boto3.resource('dynamodb')
+     dynamodb = boto3.resource('dynamodb',
+                              aws_access_key_id=ACCESS_KEY,
+                              aws_secret_access_key=SECRET_KEY,
+                              region_name='ap-southeast-1')
      table = dynamodb.Table("lightSensor")
 
      response = table.query(Limit=1,
@@ -129,41 +182,74 @@ def toggle_function(changePin, toggle):
 
      response2 = table.query(ScanIndexForward=True,
                            KeyConditionExpression=Key('id').eq('light'))
+
+     response_1 = table.query(Limit=1,
+                           ScanIndexForward=False,
+                           KeyConditionExpression=Key('id').eq('light2'))
+
+     response_2 = table.query(ScanIndexForward=True,
+                           KeyConditionExpression=Key('id').eq('light2'))
     
      items = {}
      graph_items = {}
+     graph_items2 = {}
 
      rows = response["Items"]
      rows_graph = response2["Items"]
     
-     time = 0
+     rows2 = response_1["Items"]
+     rows_graph2 = response_2["Items"]
+    
+     state_light = None
+     state_distance = None
     
      for r in rows_graph:
-        if(r['timestamp']/1000 >= (time+300)):
-            time = (r['timestamp']/1000)
-            
-            if(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m') in graph_items and
-               ((graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('valueDist') == 1) or
-               (graph_items.get(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')).get('state') == 1))):
-                continue
-            
-            else:
-                if(r["distance"] <= 600 and r["distance"] >= 300):
-                    r['distance'] = 1
-                else:
-                    r['distance'] = 0
-                
-                graph_items[datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m')] = {
-                    'valueDist' : r["distance"],
-                    'valueLight' : r["light"],
-                    'state' : r['state']
-                }
-                
-                print(datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%m'),r['state'])
-            
+        if(r["distance"] <= 600 and r["distance"] >= 300):
+            r['distance'] = 1
         else:
-            continue
+            r['distance'] = 0
         
+        if(state_light != None and state_distance != None):
+            if(r['state'] == state_light and r['distance'] == state_distance):
+                continue
+            else:
+                state_light = r['state'];
+                state_distance = r['distance']
+        else:
+            state_light = r['state'];
+            state_distance = r['distance']
+        
+        graph_items[datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%M')] = {
+            'valueDist' : r["distance"],
+            'valueLight' : r["light"],
+            'state' : r['state']
+        }
+        
+     state_light = None
+     state_distance = None
+    
+     for r in rows_graph2:
+        if(r["distance"] <= 600 and r["distance"] >= 300):
+            r['distance'] = 1
+        else:
+            r['distance'] = 0
+        
+        if(state_light != None and state_distance != None):
+            if(r['state'] == state_light and r['distance'] == state_distance):
+                continue
+            else:
+                state_light = r['state'];
+                state_distance = r['distance']
+        else:
+            state_light = r['state'];
+            state_distance = r['distance']
+            
+        graph_items2[datetime.fromtimestamp(int(r['timestamp'])/1000).strftime('%Y-%m-%d %H:%M')] = {
+            'valueDist' : r["distance"],
+            'valueLight' : r["light"],
+            'state' : r['state']
+        }
+    
      for r in rows:
         items = {
             "pins" : pins,
@@ -173,9 +259,27 @@ def toggle_function(changePin, toggle):
             'row_graph' : graph_items
         }
         preLight = r["light"]
+        
+     for r in rows2:
+        items.update({
+            "pins" : pins,
+            'valueDist2' : r["distance"],
+            'valueLight2' : r["light"],
+            'preLight2' : preLight,
+            'row2' : graph_items2
+        })
+        preLight = r["light"]
      
      topic = 'lightSensor'
-     publish_to_topic(topic, payload)
+     print("Publishing...")
+     print("\tTopic:", topic)
+     print("\tPayload:", payload)
+     publish_future, packet_id = mqtt_connection.publish(
+        topic=topic,
+        payload=json.dumps(payload),
+        qos=mqtt.QoS.AT_LEAST_ONCE)
+     publish_future.result()
+     print("Published.")
      
      return render_template('light.html', **items)
 
