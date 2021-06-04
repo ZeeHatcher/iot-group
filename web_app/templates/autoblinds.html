@@ -49,7 +49,7 @@
         </div>
         <div class="card-body">
           <div class="text-center">
-            <span name="current-position" class="fs-1">-</span>%<br><span class="label d-block">current position</span>
+            <span name="current-position" class="fs-1">-</span><br><span class="label d-block">current position</span>
           </div>
 
           <div class="d-flex">
@@ -178,17 +178,19 @@
           let root = $(this).parentsUntil("#autoblinds", ".col");
           let id = root.attr("id");
 
-          let pos = root.find("[name='motor-pos']").val();
+          let mx = parseInt(root.find("[name='motor-max-pos']").val());
+          let mn = parseInt(root.find("[name='motor-min-pos']").val());
+          let pos = parseInt(root.find("[name='motor-pos']").val());
 
-          if (pos < 0 || pos > 100) {
+          if (pos < mn || pos > mx) {
             alert("Invalid desired position.");
             return;
           }
 
           let data = {
             "motor_pos": pos,
-            "motor_min_pos": root.find("[name='motor-min-pos']").val(),
-            "motor_max_pos": root.find("[name='motor-max-pos']").val(),
+            "motor_min_pos": mn,
+            "motor_max_pos": mx,
           };
 
           $.ajax({
