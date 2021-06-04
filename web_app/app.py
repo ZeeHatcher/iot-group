@@ -36,6 +36,10 @@ def publish_to_topic(topic, payload):
 def index():
     return redirect("/autoblinds")
 
+@app.route("/autoblinds")
+def autoblinds():
+    return render_template("autoblinds.html")
+
 @app.route("/inventory")
 def inventory():
     return render_template("inventory.html")
@@ -43,10 +47,7 @@ def inventory():
 @app.route("/light")
 def light():
     global preLight
-    dynamodb = boto3.resource("dynamodb",
-                              aws_access_key_id=ACCESS_KEY,
-                              aws_secret_access_key=SECRET_KEY,
-                              region_name='ap-southeast-1')
+    dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table("lightSensor")
 
     response = table.query(Limit=1,
@@ -170,10 +171,7 @@ def toggle_function(changePin, toggle):
              payload = { "state": 0 }
              pins[changePin]['state'] = 0
      
-     dynamodb = boto3.resource('dynamodb',
-                              aws_access_key_id=ACCESS_KEY,
-                              aws_secret_access_key=SECRET_KEY,
-                              region_name='ap-southeast-1')
+     dynamodb = boto3.resource('dynamodb')
      table = dynamodb.Table("lightSensor")
 
      response = table.query(Limit=1,
