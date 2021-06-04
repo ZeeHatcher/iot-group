@@ -163,13 +163,13 @@
        var myLineChart = new Chart(ctxL, {
         type: 'line',
         data: {
-          labels: [{% for data in row_graph2 %}
-                      "{{ data }}",
+          labels: [{% for dt in row2 %}
+                      "{{ dt }}",
                    {% endfor %}],
           datasets: [{
               label: "Light",
-              data: [{% for data in row_graph2 %}
-                      {{ row_graph[data].state }},
+              data: [{% for dt in row2 %}
+                      {{ row2[dt].state }},
                    {% endfor %}],
               backgroundColor: [
                 'rgba(105, 0, 132, .2)',
@@ -181,8 +181,8 @@
             },
             {
               label: "People walked by",
-              data: [{% for data in row_graph2 %}
-                      {{ row_graph[data].valueDist }}
+              data: [{% for dt in row2 %}
+                      {{ row2[dt].valueDist }},
                    {% endfor %}],
               backgroundColor: [
                 'rgba(0, 137, 132, .2)',
@@ -201,47 +201,46 @@
     </script>
 
 	{% for pin in pins %}
-      {% if pin == 3%} 
-        {% if valueDist <= 600 and valueDist >= 300 %}
-          <script>document.getElementById("des_dist_kitchen").innerHTML = "People Walked By";</script>
-        {% else %}
-          <script>document.getElementById("des_dist_kitchen").innerHTML = "There is no people walked by";</script>
-        {% endif %}
+        	{% if pin == 3%} 
+			{% if valueDist <= 600 and valueDist >= 300 %}
+			  <script>document.getElementById("des_dist_kitchen").innerHTML = "People Walked By";</script>
+			{% else %}
+			  <script>document.getElementById("des_dist_kitchen").innerHTML = "There is no people walked by";</script>
+			{% endif %}
 
-        {% if (valueLight <= 50 and valueLight != 0) or (preLight <= 50) %}
-          <script>document.getElementById("des_light_kitchen").innerHTML = "Moon";</script>
-        {% else %}
-          <script>document.getElementById("des_light_kitchen").innerHTML = "Sun";</script>
-        {% endif %}
-	{% else %}
-        {% if valueDist <= 600 and valueDist >= 300 %}
-          <script>document.getElementById("des_dist_bedroom").innerHTML = "People Walked By";</script>
-        {% else %}
-          <script>document.getElementById("des_dist_bedroom").innerHTML = "There is no people walked by";</script>
-        {% endif %}
+			{% if (valueLight <= 50 and valueLight != 0) or (preLight <= 50) %}
+			  <script>document.getElementById("des_light_kitchen").innerHTML = "Moon";</script>
+			{% else %}
+			  <script>document.getElementById("des_light_kitchen").innerHTML = "Sun";</script>
+			{% endif %}
+		{% else %}
+			{% if valueDist2 <= 600 and valueDist2 >= 300 %}
+			  <script>document.getElementById("des_dist_bedroom").innerHTML = "People Walked By";</script>
+			{% else %}
+			  <script>document.getElementById("des_dist_bedroom").innerHTML = "There is no people walked by";</script>
+			{% endif %}
 
-        {% if (valueLight <= 50 and valueLight != 0) or (preLight <= 50) %}
-          <script>document.getElementById("des_light_bedroom").innerHTML = "Moon";</script>
-        {% else %}
-          <script>document.getElementById("des_light_bedroom").innerHTML = "Sun";</script>
-        {% endif %}
-	{% endif %}
+			{% if (valueLight2 <= 50 and valueLight2 != 0) or (preLight2 <= 50) %}
+			  <script>document.getElementById("des_light_bedroom").innerHTML = "Moon";</script>
+			{% else %}
+			  <script>document.getElementById("des_light_bedroom").innerHTML = "Sun";</script>
+			{% endif %}
+		{% endif %}
     {% endfor %}
 
     {% for pin in pins %}
-        {% if pins[pin].state == 1 and pin == 3%} 
+        {% if pins[pin].state == 1 and pin == 3 %} 
             <script>document.getElementById("kitchen-success-outlined").checked = true;</script>
-		{% elif pins[pin].state == 0 and pin == 3%}
+	{% elif pins[pin].state == 0 and pin == 3 %}
           <script>document.getElementById("kitchen-secondary-outlined").checked = true;</script>
         {% endif %}
         
-		{% if pins[pin].state == 1 and pin == 4%}
+	{% if pins[pin].state == 1 and pin == 4 %}
           <script>document.getElementById("bedroom-success-outlined").checked = true;</script>
-		{% elif pins[pin].state == 0 and pin == 4%}
+	{% elif pins[pin].state == 0 and pin == 4 %}
           <script>document.getElementById("bedroom-secondary-outlined").checked = true;</script>
         {% endif %}
     {% endfor %}
-
 		
 	</body>
 </html> 
