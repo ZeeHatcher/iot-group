@@ -16,11 +16,11 @@ state = {
     "light_exterior": 0,
     "motor_pos": 0,
     "mode": "auto",
-    "motor_max_pos": 20380,
+    "motor_max_pos": 4891,
     "motor_min_pos": 0
 }
 
-subscribe_topic = "autoblinds/put"
+subscribe_topic = "autoblinds/node_autoblind/set"
 
 # Function for gracefully quitting
 def exit(msg_or_exception):
@@ -47,7 +47,21 @@ def on_message_received(topic, payload, dup, qos, retain, **kwargs):
     item = json.loads(payload)
     print("\tTopic:", topic)
     print("\tPayload:", item)
-
+    
+    if "mode" in item:
+        state["mode"] = item["mode"]
+    if "motor_max_pos" in item:
+        state["motor_max_pos"] = int(item["motor_max_pos"])
+    if "motor_min_pos" in item:
+        state["motor_min_pos"] = int(item["motor_min_pos"])
+    if "motor_pos" in item:
+        state["motor_pos"] = int(item["motor_pos"])
+        message = item["motor_pos"] + "," + state["mode"]
+    else:
+        message = "-1," + state["mode"]
+    
+    ser.write(message.encode())
+    
 def publish_sensors_data():
     t = threading.currentThread()
     while getattr(t, "is_run", True):   
@@ -59,24 +73,16 @@ def publish_sensors_data():
         }
 
         print("Publishing...")
-        print("\tTopic:", subscribe_topic)
+        print("\tTopic:", "autoblinds/node_autoblind/put")
         print("\tPayload:", payload)
         publish_future, packet_id = mqtt_connection.publish(
-            topic=subscribe_topic,
+            topic="autoblinds/node_autoblind/put",
             payload=json.dumps(payload),
             qos=mqtt.QoS.AT_LEAST_ONCE)
         publish_future.result()
         print("Published.")
 
-        time.sleep(20)
-
-def get_settings():
-    response = autoblind.get_item(Key={ "id": "1" })
-    item = response["Item"] if "Item" in response else put_item(nuid)
-    
-    states["mode"] = item["mode"]
-    states["motor_max_pos"] = int(item["motor_max_pos"])
-    states["motor_min_pos"] = int(item["motor_min_pos"])
+        time.sleep(10)
     
 def loop():
     # Do nothing if there is no incoming serial data
@@ -90,16 +96,28 @@ def loop():
     state["light_interior"] = int(values[0])
     state["light_exterior"] = int(values[1])
     state["motor_pos"] = int(values[2])
-    
-    # Calculate the difference in light values
-    light_diff = state["light_interior"] - state["light_exterior"]
-    light_diff_ratio = max(light_diff / 20, 1)
+    if (len(values) >= 4):
+        if (values[3] == "a"):
+            state["mode"] = "auto"
+        elif (values[3] == "m"):
+            state["mode"] = "manual"
     
     if state["mode"] == "auto":
-        new_motor_pos = int(light_diff_ratio * state["motor_max_pos"])
-        new_motor_pos = round(new_motor_pos / 1000) * 1000
-        state["motor_pos"] = new_motor_pos 
-        ser.write(str(new_motor_pos).encode())
+        # Calculate the difference in light values
+        light_diff = abs(state["light_interior"] - state["light_exterior"])
+        
+        if light_diff > 10:            
+            if state["light_interior"] < state["light_exterior"]:
+                new_motor_pos = state["motor_max_pos"] 
+            else:
+                new_motor_pos = state["motor_min_pos"]
+                        
+            # Update statea and arduino
+            state["motor_pos"] = new_motor_pos
+            
+            message = str(state["motor_pos"]) + ",N"
+            ser.write(message.encode())
+        
 
 if __name__ == "__main__":
     print("Running edge.py...")
